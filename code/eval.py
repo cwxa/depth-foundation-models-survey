@@ -69,19 +69,21 @@ def main():
     print("[%s] loaded in %.1fs, %d images" % (args.model, load_s, len(keys)), flush=True)
 
     rows = []
+    times = []
     for i, k in enumerate(keys, 1):
         img = imread_u(os.path.join(DATA, "images", k + ".png"))
         gt = np.load(os.path.join(DATA, "depths", k + ".npy")).astype(np.float32)
         t = time.time()
         pred = model.predict(img)
         dt = time.time() - t
+        times.append(dt)
         np.save(os.path.join(pred_dir, k + ".npy"), pred.astype(np.float32))
         pred_full = cv2.resize(pred, (W, H), interpolation=cv2.INTER_LINEAR)
         m, n = eigen_metrics(pred_full, gt)
         if m is None:
             print("skip", k, "valid", n)
             continue
-        row = {"key": k, "n_valid": n, "time_s": dt, "scale": m["p2"]["scale"]}
+        row = {"key": k, "n_valid": n, "scale": m["p2"]["scale"]}
         for tag in ("p1", "p2"):
             for mk, mv in m[tag].items():
                 row["%s_%s" % (tag, mk)] = mv
@@ -97,11 +99,11 @@ def main():
     keyset = ["p1_" + k for k in base] + ["p2_" + k for k in base]
     summary = {k: float(np.mean([r[k] for r in rows])) for k in keyset}
     summary["n"] = len(rows)
-    summary["time_s_per_image"] = float(np.mean([r["time_s"] for r in rows]))
+    summary["time_s_per_image"] = float(np.mean(times))  # 仅汇总，不写入逐图 CSV
     summary["model"] = M.REGISTRY[args.model].name
 
     with open(os.path.join(RES, "per_image_%s.csv" % args.model), "w", newline="", encoding="utf8") as f:
-        w = csv.DictWriter(f, fieldnames=["key"] + keyset + ["n_valid", "time_s", "scale", "p1_scale", "p2_scale"])
+        w = csv.DictWriter(f, fieldnames=["key"] + keyset + ["n_valid", "scale", "p1_scale", "p2_scale"])
         w.writeheader()
         w.writerows(rows)
 
