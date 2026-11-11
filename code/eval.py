@@ -5,9 +5,11 @@ Protocol
 * prediction resized to the 640x480 ground-truth resolution
 * Eigen crop  rows 45:471, cols 41:601
 * valid mask : 1e-3 < gt < 10 m, gt finite, pred finite & positive
-* scale alignment : median scaling  s = median(gt) / median(pred), pred <- s * pred
-  (all three models are affine-invariant w.r.t. absolute scale, so a single
-   global scale is the only degree of freedom we estimate; documented in the paper)
+* scale alignment : two protocols, both reported
+    P1  median scaling, s = median(gt) / median(pred)          -- one DoF
+    P2  least-squares affine fit in inverse-depth space        -- two DoF
+  All models are affine-invariant, so P2 (scale + shift) is the protocol that
+  matches the official evaluation scripts; P1 is kept as a sensitivity check.
 
 Outputs
 -------
@@ -26,6 +28,7 @@ import numpy as np
 import torch
 
 import models as M
+from metrics import CROP, MAX_D, MIN_D, eigen_metrics
 
 
 def imread_u(path):
@@ -38,70 +41,11 @@ DATA = os.path.join(ROOT, "data", "nyu_eigen")
 RES = os.path.join(ROOT, "results")
 
 H, W = 480, 640
-CROP = (45, 471, 41, 601)
-MIN_D, MAX_D = 1e-3, 10.0
 
 
 def load_index():
     with open(os.path.join(DATA, "index.txt"), encoding="utf8") as f:
         return [x.strip() for x in f if x.strip()]
-
-
-def _align_median(p, g):
-    """Protocol P1: single global scale, estimated by the median."""
-    s = np.median(g) / np.median(p)
-    return p * s, s
-
-
-def _align_affine(p, g):
-    """Protocol P2: least-squares scale + shift in inverse-depth (disparity) space.
-
-    All three models are affine-invariant: only the disparity map is meaningful,
-    so we fit  a * (1/p) + b ~ 1/g  and invert.  This is the protocol used by the
-    MiDaS / DPT / Depth-Anything evaluation scripts.
-    """
-    q = 1.0 / np.clip(p, 1e-6, None)
-    t = 1.0 / g
-    A = np.stack([q, np.ones_like(q)], axis=1)
-    sol, *_ = np.linalg.lstsq(A, t, rcond=None)
-    a, b = float(sol[0]), float(sol[1])
-    pred_inv = a * q + b
-    eps = 1e-4 * float(np.median(pred_inv[pred_inv > 0])) if np.any(pred_inv > 0) else 1e-6
-    return 1.0 / np.clip(pred_inv, eps, None), a
-
-
-def _metrics(p, g):
-    thresh = np.maximum(g / p, p / g)
-    return {
-        "absrel": float(np.mean(np.abs(g - p) / g)),
-        "sqrel": float(np.mean(((g - p) ** 2) / g)),
-        "rmse": float(np.sqrt(np.mean((g - p) ** 2))),
-        "rmse_log": float(np.sqrt(np.mean((np.log(g) - np.log(p)) ** 2))),
-        "log10": float(np.mean(np.abs(np.log10(g) - np.log10(p)))),
-        "d1": float(np.mean(thresh < 1.25)),
-        "d2": float(np.mean(thresh < 1.25 ** 2)),
-        "d3": float(np.mean(thresh < 1.25 ** 3)),
-    }
-
-
-def eigen_metrics(pred, gt):
-    """Returns (dict of P1 and P2 metrics, number of valid pixels)."""
-    h1, h2, w1, w2 = CROP
-    p = pred[h1:h2, w1:w2]
-    g = gt[h1:h2, w1:w2]
-    mask = np.isfinite(g) & (g > MIN_D) & (g < MAX_D) & np.isfinite(p) & (p > 0)
-    if mask.sum() < 100:
-        return None, int(mask.sum())
-    p, g = p[mask].astype(np.float64), g[mask].astype(np.float64)
-
-    out = {}
-    for tag, fn in (("p1", _align_median), ("p2", _align_affine)):
-        q, s = fn(p, g)
-        q = np.clip(q, MIN_D, MAX_D)  # standard clamp to the evaluation range
-        m = _metrics(q, g)
-        m["scale"] = float(s)
-        out[tag] = m
-    return out, int(mask.sum())
 
 
 def main():

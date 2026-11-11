@@ -33,6 +33,8 @@
 ```
 code/
   prepare_nyu.py       # NYU-Depth V2 Eigen 划分解包与预处理
+  metrics.py           # 裁剪/掩码/两种对齐协议/八项指标（纯 numpy，可独立测试）
+  test_metrics.py      # 指标实现的单元测试（无需 GPU 与数据集）
   models.py            # 四个模型的统一封装（含视差→深度转换）
   eval.py              # 评测主程序：双对齐协议 + 8 项指标
   efficiency.py        # 参数量 / 时延 / 吞吐 / 峰值显存
@@ -45,6 +47,17 @@ code/
 results/               # 评测结果（JSON / 逐图 CSV）
 paper/figures/         # 实验图表
 ```
+
+## 先验证指标，再跑实验
+
+指标实现是最容易出错、也最影响结论的部分，因此它被抽成 `code/metrics.py`（只依赖 numpy），并有独立测试：
+
+```bash
+python code/test_metrics.py      # 9 个用例，约 0.2 s，无需 GPU / 数据集
+```
+
+覆盖：完美预测、手算已知误差、δ 阈值边界（恰为 1.25 时不计入）、中位数对齐的尺度不变性、仿射变换的精确还原、**P1 明显劣于 P2**（即本文核心论断的可测版本）、超界截断、掩码剔除、有效像素不足。
+
 
 ## 复现
 
