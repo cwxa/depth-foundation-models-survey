@@ -1,5 +1,7 @@
 # depth-foundation-models-survey
 
+[![tests](https://github.com/cwxa/depth-foundation-models-survey/actions/workflows/tests.yml/badge.svg)](https://github.com/cwxa/depth-foundation-models-survey/actions/workflows/tests.yml)
+
 单目深度估计基础模型的**受控基准评测**代码与结果。
 
 本项目回答一个具体问题：在**完全相同的评测口径**下，跨越三代技术路线的开源深度模型，精度与效率差距到底有多大？
