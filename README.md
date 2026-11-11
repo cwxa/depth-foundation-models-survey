@@ -107,4 +107,6 @@ python code/gen_tables.py && python code/gen_tables2.py
 
 ## 许可
 
-本仓库为课程作业产出，暂未附加开源许可证。如需在 MIT / Apache-2.0 下复用，请先联系作者。
+[MIT](LICENSE) © 2026 latitudeC
+
+本项目仅供研究与教学参考。若用于论文或产品，欢迎引用本仓库链接；模型权重与数据集分别遵循其原始许可，不随本仓库分发。
