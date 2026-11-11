@@ -1,0 +1,49 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: metrics (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 指标模块只依赖 numpy —— 不装 torch/cv2，所以 CI 几十秒内就能跑完
+      - name: Install numpy
+        run: python -m pip install --upgrade pip numpy
+
+      - name: Verify metrics only need numpy
+        run: |
+          python - <<'PY'
+          import ast, pathlib, sys
+          banned = {"torch", "cv2", "timm", "models"}
+          for f in ["code/metrics.py", "code/test_metrics.py"]:
+              tree = ast.parse(pathlib.Path(f).read_text(encoding="utf8"))
+              mods = set()
+              for n in ast.walk(tree):
+                  if isinstance(n, ast.Import):
+                      mods |= {a.name.split(".")[0] for a in n.names}
+                  elif isinstance(n, ast.ImportFrom) and n.module:
+                      mods.add(n.module.split(".")[0])
+              bad = mods & banned
+              if bad:
+                  sys.exit("%s imports heavy deps: %s" % (f, sorted(bad)))
+          print("ok: only light dependencies")
+          PY
+
+      - name: Run unit tests
+        run: python code/test_metrics.py
