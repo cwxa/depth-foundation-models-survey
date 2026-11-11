@@ -1,0 +1,23 @@
+{
+  "midas": {
+    "model": "MiDaS-DPT-Hybrid",
+    "params_m": 123.1,
+    "latency_s": 0.0922,
+    "fps": 10.85,
+    "peak_mem_mb": 734.0
+  },
+  "da2": {
+    "model": "Depth-Anything-V2-Base",
+    "params_m": 97.5,
+    "latency_s": 0.1835,
+    "fps": 5.45,
+    "peak_mem_mb": 1137.0
+  },
+  "da3": {
+    "model": "Depth-Anything-V3-Base",
+    "params_m": 135.4,
+    "latency_s": 0.1025,
+    "fps": 9.76,
+    "peak_mem_mb": 945.0
+  }
+}

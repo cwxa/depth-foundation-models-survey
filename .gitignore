@@ -1,0 +1,28 @@
+# === 大数据与第三方资产（体积过大，不进仓库）===
+# 数据集、模型权重、Python 环境、TeX 发行版、上游仓库克隆
+data/
+env/
+weights/
+tools/
+repos/
+results/pred/
+
+# === 课程交付物（按要求不公开）===
+交付/
+*.pptx
+开源项目调研.md
+
+# === 生成物与临时文件 ===
+__pycache__/
+*.pyc
+.workbuddy/
+results/_check.png
+*.aux
+*.log
+*.toc
+*.out
+*.synctex.gz
+.DS_Store
+
+# 本地一次性脚本（论文修改补丁，不属项目代码）
+code/_scratch/
